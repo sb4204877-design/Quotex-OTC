@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QONEX | Professional AI Trading</title>
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --bg: #06080a;
+            --card: #0d1117;
+            --primary: #0084ff;
+            --success: #00ffa3;
+            --danger: #ff3d57;
+            --warning: #ffb800;
+            --text: #ffffff;
+            --text-dim: #6d7a8d;
+            --border: #1f2937;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background-color: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+
+        /* --- Login Section --- */
+        #login-screen { width: 100%; max-width: 400px; padding: 2.5rem; background: var(--card); border-radius: 28px; text-align: center; border: 1px solid var(--border); box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
+        .logo { width: 60px; height: 60px; background: var(--primary); border-radius: 18px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; box-shadow: 0 0 20px rgba(0,132,255,0.4); }
+        .input-group { margin-bottom: 1.2rem; text-align: left; }
+        label { display: block; margin-bottom: 8px; color: var(--text-dim); font-size: 0.8rem; font-weight: 500; }
+        input { width: 100%; padding: 14px; background: #161b22; border: 1px solid var(--border); border-radius: 12px; color: white; outline: none; transition: 0.3s; }
+        input:focus { border-color: var(--primary); }
+        .main-btn { width: 100%; padding: 15px; background: var(--primary); border: none; border-radius: 12px; font-weight: 700; color: white; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px; transition: 0.3s; }
+        .spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top: 2px solid #fff; border-radius: 50%; animation: spin 0.8s linear infinite; display: none; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* --- Modal --- */
+        #account-modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--card); padding: 2.5rem; border-radius: 28px; z-index: 100; width: 360px; border: 1px solid var(--border); }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 99; backdrop-filter: blur(8px); }
+        .acc-opt { padding: 18px; margin: 12px 0; border: 1px solid var(--border); border-radius: 16px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 15px; }
+        .acc-opt:hover { background: #161b22; border-color: var(--primary); }
+
+        /* --- Dashboard --- */
+        #dashboard { display: none; width: 95%; max-width: 1100px; padding: 10px; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: var(--card); padding: 15px 25px; border-radius: 20px; border: 1px solid var(--border); }
+        .balance-num { font-size: 1.5rem; font-weight: 800; color: var(--success); }
+
+        .grid { display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
+        .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid var(--border); margin-bottom: 20px; }
+
+        /* --- Gauge & Chart Area --- */
+        .analytics-row { display: flex; gap: 20px; align-items: center; height: 160px; }
+        .gauge-container { flex: 0 0 150px; text-align: center; }
+        .gauge-svg { width: 100%; height: auto; overflow: visible; }
+        .gauge-track { fill: none; stroke: #1f2937; stroke-width: 10; stroke-linecap: round; }
+        .gauge-color { fill: none; stroke: url(#gaugeGrad); stroke-width: 10; stroke-linecap: round; }
+        .needle { fill: #fff; transform-origin: 100px 100px; transition: 1.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        
+        .chart-box { flex: 1; height: 120px; }
+
+        /* --- Amount Logic --- */
+        .amt-ctrl { display: flex; align-items: center; justify-content: center; gap: 15px; background: #161b22; padding: 10px; border-radius: 15px; margin-top: 10px; }
+        .circle-btn { width: 35px; height: 35px; border-radius: 50%; border: 1px solid var(--border); background: var(--card); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .circle-btn:hover { background: var(--primary); border-color: var(--primary); }
+
+        /* --- Stats --- */
+        .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 15px; }
+        .stat-item { background: rgba(255,255,255,0.02); padding: 10px; border-radius: 12px; text-align: center; border: 1px solid var(--border); }
+        .stat-item small { display: block; font-size: 0.65rem; color: var(--text-dim); margin-bottom: 3px; }
+        .stat-item b { font-size: 0.9rem; }
+
+        /* --- Table --- */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { text-align: left; font-size: 0.7rem; color: var(--text-dim); padding: 12px; border-bottom: 1px solid var(--border); text-transform: uppercase; }
+        td { padding: 12px; border-bottom: 1px solid #161b22; font-size: 0.8rem; }
+        .win { color: var(--success); font-weight: 700; }
+        .loss { color: var(--danger); font-weight: 700; }
+        .dir-icon { width: 24px; height: 24px; background: #161b22; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; }
+
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 15px; }
+        .page-link { font-size: 0.75rem; color: var(--text-dim); cursor: pointer; padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px; }
+
+        .btn-start { background: var(--success); color: #000; }
+        .btn-stop { background: var(--danger); color: #fff; display: none; }
+    </style>
+</head>
+<body>
+
+    <!-- 1. Login -->
+    <div id="login-screen">
+        <div class="logo"><i class="fas fa-brain" style="color:white; font-size: 1.5rem;"></i></div>
+        <h2 style="margin-bottom: 5px;">QONEX AI</h2>
+        <p style="color: var(--text-dim); font-size: 0.8rem; margin-bottom: 25px;">Secure Intelligent Trading Terminal</p>
+        <div class="input-group">
+            <label>User Identity</label>
+            <input type="email" placeholder="operator@qonex.ai" id="email">
+        </div>
+        <div class="input-group">
+            <label>Security Token</label>
+            <input type="password" placeholder="••••••••" id="pass">
+        </div>
+        <button class="main-btn" onclick="login()">
+            <span id="txt">AUTHENTICATE</span>
+            <div class="spinner" id="spn"></div>
+        </button>
+    </div>
+
+    <!-- 2. Account Select -->
+    <div class="modal-overlay" id="ovl"></div>
+    <div id="account-modal">
+        <h3 style="text-align:center; margin-bottom: 20px;">Session Type</h3>
+        <div class="acc-opt" onclick="startApp('Demo Engine', 10000)">
+            <i class="fas fa-microchip" style="color: var(--warning)"></i>
+            <div><b>Demo Account</b><br><small style="color: var(--text-dim)">Virtual Liquidity</small></div>
+        </div>
+        <div class="acc-opt" onclick="startApp('Live Node', 5420.50)">
+            <i class="fas fa-satellite-dish" style="color: var(--success)"></i>
+            <div><b>Real Account</b><br><small style="color: var(--text-dim)">Market Execution</small></div>
+        </div>
+    </div>
+
+    <!-- 3. Main Dashboard -->
+    <div id="dashboard">
+        <div class="top-bar">
+            <div style="display:flex; align-items:center; gap:15px;">
+                <h2 style="color: var(--primary); letter-spacing: 1px;">QONEX</h2>
+                <div style="width: 1px; height: 30px; background: var(--border);"></div>
+                <div>
+                    <p style="font-size: 0.6rem; color: var(--text-dim);" id="node-type">LIVE NODE</p>
+                    <p class="balance-num" id="bal">$5,420.50</p>
+                </div>
+            </div>
+            <button onclick="location.reload()" style="background:none; border:1px solid #333; color: var(--text-dim); padding: 8px 15px; border-radius: 10px; cursor: pointer; font-size: 0.7rem;">
+                <i class="fas fa-power-off"></i> EXIT
+            </button>
+        </div>
+
+        <div class="grid">
+            <div class="main-col">
+                <div class="card">
+                    <div class="analytics-row">
+                        <!-- Precise Gauge -->
+                        <div class="gauge-container">
+                            <svg class="gauge-svg" viewBox="0 0 200 120">
+                                <defs>
+                                    <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" stop-color="#ff3d57" />
+                                        <stop offset="50%" stop-color="#ffb800" />
+                                        <stop offset="100%" stop-color="#00ffa3" />
+                                    </linearGradient>
+                                </defs>
+                                <path class="gauge-track" d="M30 100 A70 70 0 0 1 170 100" />
+                                <path class="gauge-color" d="M30 100 A70 70 0 0 1 170 100" />
+                                <polygon id="needle" class="needle" points="100,105 97,100 100,35 103,100" />
+                                <circle cx="100" cy="100" r="4" fill="#fff" />
+                            </svg>
+                            <p id="mkt-status" style="font-size: 0.7rem; font-weight: 700; margin-top: 5px;">CALIBRATING...</p>
+                        </div>
+                        <!-- Mini Performance Chart -->
+                        <div class="chart-box">
+                            <canvas id="qChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="stats-row">
+                        <div class="stat-item"><small>PROFIT</small><b id="s-win" style="color:var(--success)">0</b></div>
+                        <div class="stat-item"><small>LOSS</small><b id="s-loss" style="color:var(--danger)">0</b></div>
+                        <div class="stat-item"><small>TOTAL</small><b id="s-total">0</b></div>
+                        <div class="stat-item"><small>WIN RATE</small><b id="s-rate" style="color:var(--primary)">0%</b></div>
+                    </div>
+                </div>
+
+                <!-- History Table -->
+                <div class="card" style="min-height: 400px;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Asset</th>
+                                <th>Time</th>
+                                <th>Amount</th>
+                                <th>Dir</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="t-body"></tbody>
+                    </table>
+                    <div class="pagination">
+                        <div class="page-link" onclick="changePage(-1)"><i class="fas fa-chevron-left"></i></div>
+                        <span id="page-info" style="font-size: 0.7rem;">Page 1</span>
+                        <div class="page-link" onclick="changePage(1)"><i class="fas fa-chevron-right"></i></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="side-col">
+                <div class="card">
+                    <h4 style="margin-bottom: 20px; font-size: 0.8rem; color: var(--text-dim);">EXECUTION PANEL</h4>
+                    
+                    <label>Investment Amount</label>
+                    <div class="amt-ctrl">
+                        <button class="circle-btn" onclick="modAmt(-1)">-</button>
+                        <span id="amt-val" style="font-size: 1.2rem; font-weight: 700; color: var(--primary);">50</span>
+                        <button class="circle-btn" onclick="modAmt(1)">+</button>
+                    </div>
+
+                    <button class="main-btn" style="background:#161b22; border:1px solid var(--border); margin-top: 20px;" onclick="document.getElementById('ovl').style.display='block'; document.getElementById('account-modal').style.display='block';">
+                        <i class="fas fa-sync"></i> Switch Account
+                    </button>
+
+                    <hr style="margin: 25px 0; border:0; border-top:1px solid var(--border);">
+
+                    <button id="start-btn" class="main-btn btn-start" onclick="toggleEngine(true)">
+                        <i class="fas fa-play"></i> START ENGINE
+                    </button>
+                    <button id="stop-btn" class="main-btn btn-stop" onclick="toggleEngine(false)">
+                        <i class="fas fa-pause"></i> HALT ENGINE
+                    </button>
+                </div>
+
+                <div class="card" style="background: rgba(0,132,255,0.03);">
+                    <h4 style="font-size: 0.7rem; color: var(--primary);">SYSTEM LOGS</h4>
+                    <div id="logs" style="font-size: 0.6rem; color: var(--text-dim); margin-top: 10px; line-height: 1.8;">
+                        > Qonex Core v4.0 Active<br>
+                        > Waiting for initialization...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let balance = 0;
+        let chart;
+        let trades = [];
+        let stats = { w: 0, l: 0, t: 0 };
+        let currentAmt = 50;
+        let currentPage = 1;
+        let engine;
+
+        function login() {
+            document.getElementById('spn').style.display = 'block';
+            document.getElementById('txt').style.display = 'none';
+            setTimeout(() => {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('ovl').style.display = 'block';
+                document.getElementById('account-modal').style.display = 'block';
+            }, 1200);
+        }
+
+        function startApp(mode, bal) {
+            balance = bal;
+            document.getElementById('node-type').innerText = mode.toUpperCase();
+            document.getElementById('bal').innerText = '$' + bal.toLocaleString();
+            document.getElementById('ovl').style.display = 'none';
+            document.getElementById('account-modal').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            initChart();
+            updateNeedle(50);
+        }
+
+        function modAmt(v) {
+            currentAmt += v;
+            if(currentAmt < 1) currentAmt = 1;
+            document.getElementById('amt-val').innerText = currentAmt;
+        }
+
+        function updateNeedle(pct) {
+            const deg = (pct / 100 * 180) - 90;
+            document.getElementById('needle').style.transform = `rotate(${deg}deg)`;
+            const lbl = document.getElementById('mkt-status');
+            if(pct < 40) { lbl.innerText = "HIGH VOLATILITY"; lbl.style.color = "var(--danger)"; }
+            else if(pct > 65) { lbl.innerText = "OPTIMAL TREND"; lbl.style.color = "var(--success)"; }
+            else { lbl.innerText = "NEUTRAL MARKET"; lbl.style.color = "var(--warning)"; }
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('qChart').getContext('2d');
+            const grad = ctx.createLinearGradient(0, 0, 0, 120);
+            grad.addColorStop(0, 'rgba(0, 132, 255, 0.2)');
+            grad.addColorStop(1, 'rgba(0, 132, 255, 0)');
+
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: new Array(15).fill(''),
+                    datasets: [{
+                        data: [50, 52, 48, 55, 53, 60, 58, 65, 62, 70, 68, 75, 72, 80, 78],
+                        borderColor: '#0084ff',
+                        borderWidth: 2,
+                        fill: true,
+                        backgroundColor: grad,
+                        tension: 0.4,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { x: { display: false }, y: { display: false } }
+                }
+            });
+        }
+
+        function toggleEngine(run) {
+            document.getElementById('start-btn').style.display = run ? 'none' : 'flex';
+            document.getElementById('stop-btn').style.display = run ? 'flex' : 'none';
+            if(run) {
+                addLog("AI Engine engaged.");
+                engine = setInterval(execTrade, 4000);
+            } else {
+                addLog("Engine halted safely.");
+                clearInterval(engine);
+            }
+        }
+
+        function execTrade() {
+            const pairs = ['BTC/USDT', 'ETH/USDT', 'XAU/USD', 'EUR/USD'];
+            const t = {
+                pair: pairs[Math.floor(Math.random()*4)],
+                time: '1m',
+                amt: '$' + currentAmt,
+                dir: Math.random() > 0.5 ? 'up' : 'down',
+                status: 'Waiting'
+            };
+            trades.unshift(t);
+            renderTable();
+
+            setTimeout(() => {
+                const win = Math.random() > 0.45;
+                t.status = win ? 'Win' : 'Loss';
+                if(win) { stats.w++; balance += (currentAmt * 0.85); }
+                else { stats.l++; balance -= currentAmt; }
+                stats.t++;
+                updateUI(t.status);
+            }, 2500);
+        }
+
+        function updateUI(res) {
+            document.getElementById('s-win').innerText = stats.w;
+            document.getElementById('s-loss').innerText = stats.l;
+            document.getElementById('s-total').innerText = stats.t;
+            document.getElementById('s-rate').innerText = Math.round((stats.w / stats.t) * 100) + '%';
+            document.getElementById('bal').innerText = '$' + balance.toLocaleString(undefined, {minimumFractionDigits: 2});
+            
+            chart.data.datasets[0].data.push(chart.data.datasets[0].data.slice(-1)[0] + (res === 'Win' ? 5 : -5));
+            chart.data.datasets[0].data.shift();
+            chart.update();
+            
+            updateNeedle(Math.floor(Math.random() * 80 + 10));
+            addLog(`Trade Closed: ${res.toUpperCase()}`);
+            renderTable();
+        }
+
+        function renderTable() {
+            const start = (currentPage - 1) * 10;
+            const data = trades.slice(start, start + 10);
+            const body = document.getElementById('t-body');
+            body.innerHTML = '';
+            data.forEach(x => {
+                const icon = x.dir === 'up' ? 'fa-arrow-up' : 'fa-arrow-down';
+                const clr = x.dir === 'up' ? 'var(--success)' : 'var(--danger)';
+                body.innerHTML += `
+                    <tr>
+                        <td><b>${x.pair}</b></td>
+                        <td>${x.time}</td>
+                        <td>${x.amt}</td>
+                        <td><div class="dir-icon"><i class="fas ${icon}" style="color:${clr}; font-size:0.7rem;"></i></div></td>
+                        <td class="${x.status.toLowerCase()}">${x.status}</td>
+                    </tr>
+                `;
+            });
+            document.getElementById('page-info').innerText = `Page ${currentPage}`;
+        }
+
+        function changePage(v) {
+            if(currentPage + v >= 1 && (currentPage + v - 1) * 10 < trades.length) {
+                currentPage += v;
+                renderTable();
+            }
+        }
+
+        function addLog(m) {
+            const l = document.getElementById('logs');
+            l.innerHTML = `> ${m}<br>` + l.innerHTML;
+        }
+    </script>
+</body>
+</html>
